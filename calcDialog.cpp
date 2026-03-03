@@ -3,6 +3,8 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QKeyEvent>
+#include <memory>
 #include "calcDialog.h"
 // Идентификаторы кнопок
 // Для цифровых кнопок идентификатор является соответствующая цифра
@@ -34,6 +36,7 @@ QVector<BtnDescr> _btnDescr;
 /// Инициализация массива _btnDescr всеми отображаемыми кнопками
 void InitBtnDescrArray()
 {
+    _btnDescr.clear();
     _btnDescr.push_back( BtnDescr("7", 7) );
     _btnDescr.push_back( BtnDescr("8", 8) );
     _btnDescr.push_back( BtnDescr("9", 9) );
@@ -65,16 +68,21 @@ CalcDialog::CalcDialog( QWidget * parent)
     // устанавливаем режим только чтения - разрешаем ввод только
     // с нарисованных кнопок
     m_pLineEdit->setReadOnly ( true );
-    m_pSignalMapper = new QSignalMapper(this);
+    m_pLineEdit->setFocusPolicy(Qt::NoFocus);
+    setFocusPolicy(Qt::StrongFocus);
     // создаем схемы выравнивания
-    QGridLayout *gridLayout = new QGridLayout();
+    std::unique_ptr<QGridLayout> gridLayoutOwner(new QGridLayout());
+    QGridLayout *gridLayout = gridLayoutOwner.get();
     QHBoxLayout *bccKeysLayout = new QHBoxLayout();
     QHBoxLayout *mainKeysLayout = new QHBoxLayout();
     QVBoxLayout *dlgLayout = new QVBoxLayout();
+    mainKeysLayout->addLayout(gridLayout);
+    gridLayoutOwner.release();
     // Заполняем форму кнопками из _btnDescr
     for (int i = 0; i < _btnDescr.size(); i++) {
         // Создаем кнопку с текстом из очередного описателя
         QPushButton *button = new QPushButton(_btnDescr[i].text);
+        button->setFocusPolicy(Qt::NoFocus);
         // если кнопка в основном блоке цифровых или "=" -
         // разрешаем изменение всех размеров
         if( i >= GRID_KEYS + 3 || i < GRID_KEYS)
@@ -86,24 +94,19 @@ CalcDialog::CalcDialog( QWidget * parent)
             fnt.setPointSize( fnt.pointSize () + 4 );
             button->setFont( fnt );
         }
-        // связываем сигнал нажатия кнопки с объектом m_pSignalMapper
-        connect(button, SIGNAL(clicked()), m_pSignalMapper, SLOT(map()));
-        // обеспечиваем соответствие кнопки её идентификатору
-        m_pSignalMapper->setMapping(button, _btnDescr[i].id);
+        const int btnId = _btnDescr[i].id;
+        connect(button, &QPushButton::clicked, this, [this, btnId]() {
+            clicked(btnId);
+        });
         if(i<GRID_KEYS) // Если кнопка из центрального блока - помещаем в сетку
             gridLayout->addWidget(button, i / 4, i % 4);
         else if( i < GRID_KEYS + 3) // кнопка из верхнего блока - в bccKeysLayout
             bccKeysLayout->addWidget(button);
         else
-        { // кнопка "=" - помещаем в блок mainKeysLayout после gridLayout
-            mainKeysLayout->addLayout(gridLayout);
+        { // кнопка "=" - помещаем в блок mainKeysLayout
             mainKeysLayout->addWidget(button);
         }
     }
-    // связываем сигнал из m_pSignalMapper о нажатии со слотом clicked
-    // нашего класса
-    connect(m_pSignalMapper, SIGNAL(mapped(int)),
-            this, SLOT(clicked(int)));
     // добавляем блоки кнопок в схему выравнивания всей формы
     dlgLayout->addWidget(m_pLineEdit);
     dlgLayout->addLayout(bccKeysLayout);
@@ -113,6 +116,49 @@ CalcDialog::CalcDialog( QWidget * parent)
     // отображаем "0" в поле ввода чисел m_pLineEdit
     setNumEdit( 0 );
 };
+void CalcDialog::keyPressEvent(QKeyEvent *event)
+{
+    const int key = event->key();
+
+    if (key >= Qt::Key_0 && key <= Qt::Key_9) {
+        clicked(key - Qt::Key_0);
+        return;
+    }
+
+
+    switch (key) {
+    case Qt::Key_Period:
+    case Qt::Key_Comma:
+        clicked(DOT);
+        return;
+    case Qt::Key_Plus:
+        clicked(PLUS);
+        return;
+    case Qt::Key_Minus:
+        clicked(MINUS);
+        return;
+    case Qt::Key_Asterisk:
+        clicked(MUL);
+        return;
+    case Qt::Key_Slash:
+        clicked(DIV);
+        return;
+    case Qt::Key_Enter:
+    case Qt::Key_Return:
+    case Qt::Key_Equal:
+        clicked(EQ);
+        return;
+    case Qt::Key_Backspace:
+        clicked(BKSP);
+        return;
+    case Qt::Key_Escape:
+        clicked(CLR_ALL);
+        return;
+    default:
+        QDialog::keyPressEvent(event);
+    }
+}
+
 // Обработка нажатия клавиш
 void CalcDialog::clicked(int id)
 {
