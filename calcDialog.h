@@ -3,6 +3,8 @@
 #include <QDialog>
 #include <QLineEdit>
 #include <QSignalMapper>
+
+class QKeyEvent;
 /// Класс, реализующий калькулятор
 class CalcDialog: public QDialog
 {
@@ -11,6 +13,7 @@ public:
     CalcDialog( QWidget * parent = 0);
     virtual ~CalcDialog(){};
 protected:
+    void keyPressEvent(QKeyEvent *event) override;
     QSignalMapper * m_pSignalMapper;
     QLineEdit     * m_pLineEdit;
     double m_Val; ///< Значение, с которым будет выполнена операция
@@ -32,3 +35,4 @@ private slots:
     void clicked(int id);
 };
 #endif
+
