@@ -2,7 +2,6 @@
 #define _CALC_DIALOG_H_
 #include <QDialog>
 #include <QLineEdit>
-#include <QSignalMapper>
 
 class QKeyEvent;
 /// Класс, реализующий калькулятор
@@ -14,7 +13,6 @@ public:
     virtual ~CalcDialog(){};
 protected:
     void keyPressEvent(QKeyEvent *event) override;
-    QSignalMapper * m_pSignalMapper;
     QLineEdit     * m_pLineEdit;
     double m_Val; ///< Значение, с которым будет выполнена операция
     int
@@ -35,4 +33,3 @@ private slots:
     void clicked(int id);
 };
 #endif
-
