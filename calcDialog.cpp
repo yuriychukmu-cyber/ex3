@@ -25,7 +25,7 @@
 #define CLR     31
 #define CLR_ALL 32
 // количество кнопок в группе, отображаемой в виде сетки
-#define GRID_KEYS 16
+#define GRID_KEYS 20
 /// Описатель кнопки
 struct BtnDescr{
     QString text; ///< Отображаемый на кнопке текст
@@ -43,6 +43,10 @@ QVector<BtnDescr> _btnDescr;
 void InitBtnDescrArray()
 {
     _btnDescr.clear();
+    _btnDescr.push_back( BtnDescr("^", POW) );
+    _btnDescr.push_back( BtnDescr("log", LOG) );
+    _btnDescr.push_back( BtnDescr("sin", SIN) );
+    _btnDescr.push_back( BtnDescr("cos", COS) );
     _btnDescr.push_back( BtnDescr("7", 7) );
     _btnDescr.push_back( BtnDescr("8", 8) );
     _btnDescr.push_back( BtnDescr("9", 9) );
@@ -82,7 +86,7 @@ CalcDialog::CalcDialog( QWidget * parent)
     QHBoxLayout *bccKeysLayout = new QHBoxLayout();
     QHBoxLayout *mainKeysLayout = new QHBoxLayout();
     QVBoxLayout *dlgLayout = new QVBoxLayout();
-    QVBoxLayout *dopFuncion = new QVBoxLayout();
+    QHBoxLayout *dopFuncion = new QHBoxLayout();
     mainKeysLayout->addLayout(gridLayout);
     gridLayoutOwner.release();
     // Заполняем форму кнопками из _btnDescr
@@ -109,18 +113,20 @@ CalcDialog::CalcDialog( QWidget * parent)
             gridLayout->addWidget(button, i / 4, i % 4);
         else if( i < GRID_KEYS + 3) // кнопка из верхнего блока - в bccKeysLayout
             bccKeysLayout->addWidget(button);
-        else if(i == EQ ) // кнопка "=" - помещаем в блок mainKeysLayout
+        else if(_btnDescr[i].id == EQ ) // кнопка "=" - помещаем в блок mainKeysLayout
             mainKeysLayout->addWidget(button);
         else if(i < COS) // новые кнопки ^ , log, sin
             dopFuncion->addWidget(button);
         else {// cos
             dopFuncion->addWidget(button);
-            mainKeysLayout->addLayout(dopFuncion);
+            //mainKeysLayout->addLayout(dopFuncion);
+
         }
     }
     // добавляем блоки кнопок в схему выравнивания всей формы
     dlgLayout->addWidget(m_pLineEdit);
     dlgLayout->addLayout(bccKeysLayout);
+    dlgLayout->addLayout(dopFuncion);
     dlgLayout->addLayout(mainKeysLayout);
     // связываем схему выравнивания dlgLayout с формой
     setLayout(dlgLayout);
