@@ -4,135 +4,132 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QKeyEvent>
-#include <memory>
+#include <cmath>
 #include "calcDialog.h"
-// Идентификаторы кнопок
-// Для цифровых кнопок идентификатор является соответствующая цифра
 
-#define POW     1
-#define LOG     2
-#define SIN     3
-#define COS     4
+namespace {
 
-#define DIV     10
-#define MUL     11
-#define MINUS   12
-#define PLUS    13
-#define INVERSE 15
-#define DOT     16
-#define EQ      20
-#define BKSP    30
-#define CLR     31
-#define CLR_ALL 32
-// количество кнопок в группе, отображаемой в виде сетки
-#define GRID_KEYS 20
-/// Описатель кнопки
-struct BtnDescr{
-    QString text; ///< Отображаемый на кнопке текст
-    int
-        id;
-    ///< Идентификатор кнопки
-    BtnDescr() { id=0;}; ///< Конструктор по умолчанию
-    ///< Конструктор для инициализации
-    BtnDescr( const QString & str, int i)
-    {  text = str; id = i; };
+constexpr int GRID_KEYS = 20;
+constexpr int FUNC_KEYS = 4;
+constexpr int GRID_COLUMNS = 4;
+
+enum ButtonId {
+    POW = 100,
+    LOG = 101,
+    SIN = 102,
+    COS = 103,
+
+    DIV = 200,
+    MUL = 201,
+    MINUS = 202,
+    PLUS = 203,
+    INVERSE = 204,
+    DOT = 205,
+    EQ = 206,
+    BKSP = 207,
+    CLR = 208,
+    CLR_ALL = 209
 };
-/// Динамический массив-вектор элементов описателей кнопок
+
+struct BtnDescr {
+    QString text;
+    int id;
+
+    BtnDescr(const QString &str, int i) : text(str), id(i) {}
+};
+
 QVector<BtnDescr> _btnDescr;
-/// Инициализация массива _btnDescr всеми отображаемыми кнопками
+
 void InitBtnDescrArray()
 {
     _btnDescr.clear();
-    _btnDescr.push_back( BtnDescr("^", POW) );
-    _btnDescr.push_back( BtnDescr("log", LOG) );
-    _btnDescr.push_back( BtnDescr("sin", SIN) );
-    _btnDescr.push_back( BtnDescr("cos", COS) );
-    _btnDescr.push_back( BtnDescr("7", 7) );
-    _btnDescr.push_back( BtnDescr("8", 8) );
-    _btnDescr.push_back( BtnDescr("9", 9) );
-    _btnDescr.push_back( BtnDescr("/", DIV) );
-    _btnDescr.push_back( BtnDescr("4", 4) );
-    _btnDescr.push_back( BtnDescr("5", 5) );
-    _btnDescr.push_back( BtnDescr("6", 6) );
-    _btnDescr.push_back( BtnDescr("*", MUL) );
-    _btnDescr.push_back( BtnDescr("1", 1) );
-    _btnDescr.push_back( BtnDescr("2", 2) );
-    _btnDescr.push_back( BtnDescr("3", 3) );
-    _btnDescr.push_back( BtnDescr("-", MINUS) );
-    _btnDescr.push_back( BtnDescr("0", 0) );
-    _btnDescr.push_back( BtnDescr("-/+", INVERSE) );
-    _btnDescr.push_back( BtnDescr(".", DOT) );
-    _btnDescr.push_back( BtnDescr("+", PLUS) );
-    _btnDescr.push_back( BtnDescr("<-",BKSP) );
-    _btnDescr.push_back( BtnDescr("CE",CLR) );
-    _btnDescr.push_back( BtnDescr("C", CLR_ALL) );
-    _btnDescr.push_back( BtnDescr("=", EQ) );
+    _btnDescr.push_back(BtnDescr("^", POW));
+    _btnDescr.push_back(BtnDescr("log", LOG));
+    _btnDescr.push_back(BtnDescr("sin", SIN));
+    _btnDescr.push_back(BtnDescr("cos", COS));
+    _btnDescr.push_back(BtnDescr("7", 7));
+    _btnDescr.push_back(BtnDescr("8", 8));
+    _btnDescr.push_back(BtnDescr("9", 9));
+    _btnDescr.push_back(BtnDescr("/", DIV));
+    _btnDescr.push_back(BtnDescr("4", 4));
+    _btnDescr.push_back(BtnDescr("5", 5));
+    _btnDescr.push_back(BtnDescr("6", 6));
+    _btnDescr.push_back(BtnDescr("*", MUL));
+    _btnDescr.push_back(BtnDescr("1", 1));
+    _btnDescr.push_back(BtnDescr("2", 2));
+    _btnDescr.push_back(BtnDescr("3", 3));
+    _btnDescr.push_back(BtnDescr("-", MINUS));
+    _btnDescr.push_back(BtnDescr("0", 0));
+    _btnDescr.push_back(BtnDescr("-/+", INVERSE));
+    _btnDescr.push_back(BtnDescr(".", DOT));
+    _btnDescr.push_back(BtnDescr("+", PLUS));
+    _btnDescr.push_back(BtnDescr("<-", BKSP));
+    _btnDescr.push_back(BtnDescr("CE", CLR));
+    _btnDescr.push_back(BtnDescr("C", CLR_ALL));
+    _btnDescr.push_back(BtnDescr("=", EQ));
 }
-/// Конструктор класса калькулятора
-CalcDialog::CalcDialog( QWidget * parent)
+
+} // namespace
+
+CalcDialog::CalcDialog(QWidget *parent)
+    : QDialog(parent)
 {
-    initNum(); // инициализируем счетные переменные
-    InitBtnDescrArray(); // инициализируем массив с описанием кнопок
-    // Создаем форму
+    initNum();
+    InitBtnDescrArray();
+
     m_pLineEdit = new QLineEdit(this);
-    // устанавливаем режим только чтения - разрешаем ввод только
-    // с нарисованных кнопок
-    m_pLineEdit->setReadOnly ( true );
+    m_pLineEdit->setReadOnly(true);
     m_pLineEdit->setFocusPolicy(Qt::NoFocus);
     setFocusPolicy(Qt::StrongFocus);
-    // создаем схемы выравнивания
-    std::unique_ptr<QGridLayout> gridLayoutOwner(new QGridLayout());
-    QGridLayout *gridLayout = gridLayoutOwner.get();
+
+    QGridLayout *gridLayout = new QGridLayout();
     QHBoxLayout *bccKeysLayout = new QHBoxLayout();
     QHBoxLayout *mainKeysLayout = new QHBoxLayout();
+    QVBoxLayout *funcKeysLayout = new QVBoxLayout();
     QVBoxLayout *dlgLayout = new QVBoxLayout();
-    QHBoxLayout *dopFuncion = new QHBoxLayout();
+
+    mainKeysLayout->addLayout(funcKeysLayout);
     mainKeysLayout->addLayout(gridLayout);
-    gridLayoutOwner.release();
-    // Заполняем форму кнопками из _btnDescr
-    for (int i = 0; i < _btnDescr.size(); i++) {
-        // Создаем кнопку с текстом из очередного описателя
+
+    for (int i = 0; i < _btnDescr.size(); ++i) {
         QPushButton *button = new QPushButton(_btnDescr[i].text);
         button->setFocusPolicy(Qt::NoFocus);
-        // если кнопка в основном блоке цифровых или "=" -
-        // разрешаем изменение всех размеров
-        if( i >= GRID_KEYS + 3 || i < GRID_KEYS)
-            button->setSizePolicy ( QSizePolicy::Expanding,
-                                  QSizePolicy::Expanding);
-        // если кнопка не цифровая - увеличиваем шрифт надписи на 4 пункта
-        if( _btnDescr[i].id >= 10 ){
-            QFont fnt = button->font();
-            fnt.setPointSize( fnt.pointSize () + 4 );
-            button->setFont( fnt );
+
+        if (i < GRID_KEYS || _btnDescr[i].id == EQ) {
+            button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         }
+
+        if (_btnDescr[i].id >= 10 && _btnDescr[i].id <= 999) {
+            QFont fnt = button->font();
+            fnt.setPointSize(fnt.pointSize() + 4);
+            button->setFont(fnt);
+        }
+
         const int btnId = _btnDescr[i].id;
         connect(button, &QPushButton::clicked, this, [this, btnId]() {
             clicked(btnId);
         });
-        if(i<GRID_KEYS) // Если кнопка из центрального блока - помещаем в сетку
-            gridLayout->addWidget(button, i / 4, i % 4);
-        else if( i < GRID_KEYS + 3) // кнопка из верхнего блока - в bccKeysLayout
-            bccKeysLayout->addWidget(button);
-        else if(_btnDescr[i].id == EQ ) // кнопка "=" - помещаем в блок mainKeysLayout
-            mainKeysLayout->addWidget(button);
-        else if(i < COS) // новые кнопки ^ , log, sin
-            dopFuncion->addWidget(button);
-        else {// cos
-            dopFuncion->addWidget(button);
-            //mainKeysLayout->addLayout(dopFuncion);
 
+        if (i < FUNC_KEYS) {
+            funcKeysLayout->addWidget(button);
+        } else if (i < GRID_KEYS) {
+            const int gridIndex = i - FUNC_KEYS;
+            gridLayout->addWidget(button, gridIndex / GRID_COLUMNS, gridIndex % GRID_COLUMNS);
+        } else if (i < GRID_KEYS + 3) {
+            bccKeysLayout->addWidget(button);
+        } else if (_btnDescr[i].id == EQ) {
+            mainKeysLayout->addWidget(button);
         }
     }
-    // добавляем блоки кнопок в схему выравнивания всей формы
+
     dlgLayout->addWidget(m_pLineEdit);
     dlgLayout->addLayout(bccKeysLayout);
-    dlgLayout->addLayout(dopFuncion);
     dlgLayout->addLayout(mainKeysLayout);
-    // связываем схему выравнивания dlgLayout с формой
     setLayout(dlgLayout);
-    // отображаем "0" в поле ввода чисел m_pLineEdit
-    setNumEdit( 0 );
-};
+
+    setNumEdit(0);
+}
+
 void CalcDialog::keyPressEvent(QKeyEvent *event)
 {
     const int key = event->key();
@@ -141,7 +138,6 @@ void CalcDialog::keyPressEvent(QKeyEvent *event)
         clicked(key - Qt::Key_0);
         return;
     }
-
 
     switch (key) {
     case Qt::Key_Period:
@@ -160,6 +156,9 @@ void CalcDialog::keyPressEvent(QKeyEvent *event)
     case Qt::Key_Slash:
         clicked(DIV);
         return;
+    case Qt::Key_AsciiCircum:
+        clicked(POW);
+        return;
     case Qt::Key_Enter:
     case Qt::Key_Return:
     case Qt::Key_Equal:
@@ -176,29 +175,25 @@ void CalcDialog::keyPressEvent(QKeyEvent *event)
     }
 }
 
-// Обработка нажатия клавиш
 void CalcDialog::clicked(int id)
 {
     switch (id) {
-    case INVERSE: { // унарная операция +/-
+    case INVERSE:
         setNumEdit(getNumEdit() * -1.0);
         break;
-    }
 
-    case DOT: { // добавление десятичной точки
+    case DOT: {
         checkOpPerf();
 
         QString str = m_pLineEdit->text();
         if (str.isEmpty())
             str = "0";
 
-        // Не добавлять вторую точку
         if (str.contains('.'))
             break;
 
         str.append('.');
 
-        // Проверяем, что это корректное число (например, не "0..")
         bool ok = false;
         str.toDouble(&ok);
         if (ok)
@@ -207,40 +202,59 @@ void CalcDialog::clicked(int id)
         break;
     }
 
+    case SIN:
+        setNumEdit(std::sin(getNumEdit()));
+        m_bPerf = true;
+        break;
+
+    case COS:
+        setNumEdit(std::cos(getNumEdit()));
+        m_bPerf = true;
+        break;
+
+    case LOG: {
+        const double num = getNumEdit();
+        if (num <= 0) {
+            m_pLineEdit->setText("Error");
+        } else {
+            setNumEdit(std::log10(num));
+        }
+        m_bPerf = true;
+        break;
+    }
+
     case DIV:
     case MUL:
     case PLUS:
     case MINUS:
-    case EQ: {
+    case POW:
+    case EQ:
         calcPrevOp(id);
         break;
-    }
 
-    case CLR_ALL: { // удалить всё
+    case CLR_ALL:
         initNum();
         setNumEdit(0);
         break;
-    }
 
-    case CLR: { // очистить текущий ввод
+    case CLR:
         setNumEdit(0);
         break;
-    }
 
-    case BKSP: { // backspace
+    case BKSP: {
         checkOpPerf();
 
         QString str = m_pLineEdit->text();
         if (!str.isEmpty()) {
             str.chop(1);
-            if (str.isEmpty() || str == "-" )
+            if (str.isEmpty() || str == "-")
                 str = "0";
             m_pLineEdit->setText(str);
         }
         break;
     }
 
-    default: { // цифры
+    default:
         if (id < 0 || id > 9)
             break;
 
@@ -252,70 +266,76 @@ void CalcDialog::clicked(int id)
 
         str.append(QChar('0' + id));
         m_pLineEdit->setText(str);
-
         break;
     }
-    }
 }
+
 // Получить число из m_pLineEdit
 double CalcDialog::getNumEdit()
 {
-    double result;
-    QString str =  m_pLineEdit->text ();
-    result = str.toDouble(); // преобразовать строку в число
-    return result;
-};
+    return m_pLineEdit->text().toDouble();
+}
+
 // записать число в m_pLineEdit
-void CalcDialog::setNumEdit( double num )
+void CalcDialog::setNumEdit(double num)
 {
     QString str;
-    str.setNum ( num,  'g', 25 ); // преобразовать вещественное число в строку
-    m_pLineEdit->setText ( str  );
-};
+    str.setNum(num, 'g', 25);
+    m_pLineEdit->setText(str);
+}
+
 // Выполнить предыдущую бинарную операцию
-void CalcDialog::calcPrevOp( int curOp )
+void CalcDialog::calcPrevOp(int curOp)
 {
-    // получить число на экране
-    // m_Val хранит число, введенное до нажатия кнопки операции
-    double num = getNumEdit();
-    switch( m_Op )
-    {
-    case DIV:{
-        if ( num != 0) m_Val /= num;
-        else m_Val = 0;
+    const double num = getNumEdit();
+
+    switch (m_Op) {
+    case DIV:
+        if (num != 0.0) {
+            m_Val /= num;
+        } else {
+            m_pLineEdit->setText("Error");
+            m_Val = 0;
+            m_Op = EQ;
+            m_bPerf = true;
+            return;
+        }
         break;
-    }
-    case MUL:{
+    case MUL:
         m_Val *= num;
         break;
-    }
-    case PLUS:{
+    case PLUS:
         m_Val += num;
         break;
-    }
-    case MINUS:{
+    case MINUS:
         m_Val -= num;
         break;
-    }
-    case EQ: { // если была нажата кнопка "=" - не делать ничего
+    case POW:
+        m_Val = std::pow(m_Val, num);
+        break;
+    case EQ:
         m_Val = num;
-        break; }
+        break;
+    default:
+        break;
     }
+
     m_Op = curOp;
-    // запомнить результат текущей операции
-    setNumEdit( m_Val ); // отобразить результат
+    setNumEdit(m_Val);
     m_bPerf = true;
-    // поставить флаг выполнения операции
-};
+}
+
 void CalcDialog::checkOpPerf()
 {
-    if( m_bPerf ){
-        // если что-то выполнялось - очистить m_pLineEdit
+    if (m_bPerf) {
         m_pLineEdit->clear();
         m_bPerf = false;
-    };
-};
+    }
+}
+
 void CalcDialog::initNum()
 {
-    m_bPerf = false; m_Val = 0; m_Op = EQ;
-};
+    m_bPerf = false;
+    m_Val = 0;
+    m_Op = EQ;
+}
