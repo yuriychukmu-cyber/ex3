@@ -217,7 +217,7 @@ void CalcDialog::clicked(int id)
         if (num <= 0) {
             m_pLineEdit->setText("Error");
         } else {
-            setNumEdit(std::log10(num));
+            calcPrevOp(id);
         }
         m_bPerf = true;
         break;
@@ -312,6 +312,9 @@ void CalcDialog::calcPrevOp(int curOp)
         break;
     case POW:
         m_Val = std::pow(m_Val, num);
+        break;
+    case LOG:
+        m_Val = std::log(m_Val) / std::log(m_Val);
         break;
     case EQ:
         m_Val = num;
